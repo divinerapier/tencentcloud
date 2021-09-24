@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use reqwest::Method;
 
-use crate::request::Scheme;
+use crate::{Scheme, ROOT_DOMAIN};
 
 #[derive(Debug, Clone)]
 pub enum SignMethod {
     Tc3HmacSha256,
+    HmacSHA1,
+    HmacSHA256,
 }
 
 impl Default for SignMethod {
@@ -19,6 +21,8 @@ impl AsRef<str> for SignMethod {
     fn as_ref(&self) -> &str {
         match self {
             SignMethod::Tc3HmacSha256 => "TC3-HMAC-SHA256",
+            SignMethod::HmacSHA1 => "HmacSHA1",
+            SignMethod::HmacSHA256 => "HmacSHA256",
         }
     }
 }
@@ -26,13 +30,21 @@ impl AsRef<str> for SignMethod {
 #[derive(Debug, Clone)]
 pub enum Language {
     ZHCN,
+    ENUS,
 }
 
 impl AsRef<str> for Language {
     fn as_ref(&self) -> &str {
         match self {
             Language::ZHCN => "zh-CN",
+            Language::ENUS => "en-US",
         }
+    }
+}
+
+impl Default for Language {
+    fn default() -> Self {
+        Language::ZHCN
     }
 }
 
@@ -52,7 +64,7 @@ impl Profile {
 pub struct ClientProfile {
     pub sing_method: SignMethod,
     pub unsigned_payload: bool,
-    pub language: String,
+    pub language: Language,
     pub debug: bool,
     pub disable_region_breaker: bool,
     pub backup_endpoint: String,
@@ -86,7 +98,7 @@ impl Default for HTTProfile {
             method: Method::POST,
             timeout: 60,
             scheme: Default::default(),
-            root_domain: Default::default(),
+            root_domain: ROOT_DOMAIN.to_string(),
             endpoint: Default::default(),
         }
     }

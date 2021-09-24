@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Copy)]
 pub enum Region {
     // guangzhou
     APGuangzhou1, // "ap-guangzhou-1"
@@ -43,6 +43,38 @@ pub enum Region {
     APHongkong1, // "ap-hongkong-1"
     APHongkong2, // "ap-hongkong-2"
     APHongkong3, // "ap-hongkong-3"
+}
+
+impl Debug for Region {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::APGuangzhou1 => write!(f, "ap-guangzhou-1"),
+            Self::APGuangzhou2 => write!(f, "ap-guangzhou-2"),
+            Self::APGuangzhou3 => write!(f, "ap-guangzhou-3"),
+            Self::APGuangzhou4 => write!(f, "ap-guangzhou-4"),
+            Self::APGuangzhou6 => write!(f, "ap-guangzhou-6"),
+            Self::APShanghai1 => write!(f, "ap-shanghai-1"),
+            Self::APShanghai2 => write!(f, "ap-shanghai-2"),
+            Self::APShanghai3 => write!(f, "ap-shanghai-3"),
+            Self::APShanghai4 => write!(f, "ap-shanghai-4"),
+            Self::APShanghai5 => write!(f, "ap-shanghai-5"),
+            Self::APNanjing1 => write!(f, "ap-nanjing-1"),
+            Self::APNanjing2 => write!(f, "ap-nanjing-2"),
+            Self::APBeijing1 => write!(f, "ap-beijing-1"),
+            Self::APBeijing2 => write!(f, "ap-beijing-2"),
+            Self::APBeijing3 => write!(f, "ap-beijing-3"),
+            Self::APBeijing4 => write!(f, "ap-beijing-4"),
+            Self::APBeijing5 => write!(f, "ap-beijing-5"),
+            Self::APBeijing6 => write!(f, "ap-beijing-6"),
+            Self::APBeijing7 => write!(f, "ap-beijing-7"),
+            Self::APChengdu1 => write!(f, "ap-chengdu-1"),
+            Self::APChengdu2 => write!(f, "ap-chengdu-2"),
+            Self::APChongqing1 => write!(f, "ap-chongqing-1"),
+            Self::APHongkong1 => write!(f, "ap-hongkong-1"),
+            Self::APHongkong2 => write!(f, "ap-hongkong-2"),
+            Self::APHongkong3 => write!(f, "ap-hongkong-3"),
+        }
+    }
 }
 
 impl AsRef<str> for Region {
@@ -115,5 +147,11 @@ impl FromStr for Region {
 impl Display for Region {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         (self as &dyn Debug).fmt(f)
+    }
+}
+
+impl Default for Region {
+    fn default() -> Self {
+        Region::APBeijing1
     }
 }

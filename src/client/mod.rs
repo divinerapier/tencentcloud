@@ -1,4 +1,10 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use core::panic;
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+    sync::Arc,
+    time::Duration,
+};
 
 use reqwest::{
     header::{HeaderMap, HeaderValue},
@@ -9,17 +15,23 @@ use crate::{
     credential::Credential,
     profile::{ClientProfile, HTTProfile, Profile},
     region::Region,
-    request::{BatchUpdateFirmwareRequest, RequestBuilder, Scheme, ServiceRequest},
+    request::{BatchUpdateFirmwareRequest, RequestBuilder, ServiceRequest},
+    Flat, IntoRequest, ROOT_DOMAIN,
 };
 
 pub mod iotcloud;
 
 #[derive(Clone)]
 pub struct Client {
-    inner: reqwest::Client,
-    region: Arc<Region>,
-    profile: Arc<Profile>,
-    credential: Arc<Credential>,
+    client: reqwest::Client,
+    config: Configuration,
+}
+
+#[derive(Clone)]
+pub struct Configuration {
+    pub region: Region,
+    pub profile: Arc<Profile>,
+    pub credential: Arc<Credential>,
 }
 
 impl Client {
@@ -30,54 +42,66 @@ impl Client {
 
 #[derive(Default)]
 pub struct ClientBuilder {
-    region: Option<Region>,
-    cp: Option<ClientProfile>,
-    hp: Option<HTTProfile>,
-    credential: Option<Credential>,
+    region: Region,
+    client_profile: ClientProfile,
+    http_profile: HTTProfile,
+    credential: Credential,
 }
 
 impl ClientBuilder {
     pub fn region(mut self, region: Region) -> Self {
-        self.region = Some(region);
+        self.region = region;
         self
     }
 
-    pub fn client_profile(mut self, cp: ClientProfile) -> Self {
-        self.cp = Some(cp);
+    pub fn client_profile(mut self, client_profile: ClientProfile) -> Self {
+        self.client_profile = client_profile;
         self
     }
 
-    pub fn http_profile(mut self, hp: HTTProfile) -> Self {
-        self.hp = Some(hp);
+    pub fn http_profile(mut self, http_profile: HTTProfile) -> Self {
+        self.http_profile = http_profile;
         self
     }
 
     pub fn credential(mut self, credential: Credential) -> Self {
-        self.credential = Some(credential);
+        self.credential = credential;
         self
     }
 
-    pub fn build(self) -> Option<Client> {
+    pub fn build(mut self) -> Option<Client> {
+        if self.http_profile.root_domain.is_empty() {
+            self.http_profile.root_domain = ROOT_DOMAIN.to_string();
+        }
         // TODO: handle error
-        let inner = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(self.hp.as_ref()?.timeout))
+        let client = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(self.http_profile.timeout))
             .pool_idle_timeout(Duration::from_secs(3600))
             .pool_max_idle_per_host(100)
             .build()
             .unwrap();
 
-        Some(Client {
-            inner,
-            region: Arc::new(self.region?),
-            profile: Profile::new(self.cp?, self.hp?),
-            credential: Arc::new(self.credential?),
-        })
+        let config = Configuration {
+            region: self.region,
+            profile: Profile::new(self.client_profile, self.http_profile),
+            credential: Arc::new(self.credential),
+        };
+
+        Some(Client { client, config })
     }
 }
 
 pub struct ServiceClient<T> {
-    client: Client,
+    client: reqwest::Client,
     request: RequestBuilder<T>,
+}
+
+impl<T> ServiceClient<T> {
+    pub fn new<IR: IntoRequest<Request = T>>(client: Client, ir: IR) -> ServiceClient<T> {
+        let request = ir.into_request(client.config);
+        let client = client.client;
+        ServiceClient { client, request }
+    }
 }
 
 impl Client {
@@ -88,41 +112,14 @@ impl Client {
 
 impl<T> ServiceClient<T>
 where
-    T: Into<HashMap<String, String>> + ServiceRequest,
+    T: Flat + ServiceRequest + Flat + Debug + serde::Serialize,
 {
-    pub fn send(self) -> Option<()> {
-        let request = self.request.build()?;
-
-        let mut headers = HeaderMap::new();
-        let timestamp = request.params.get("Timestamp")?.to_string();
-        let request_client = request.params.get("RequestClient")?.to_string();
-        let language = request.profile.as_ref()?.client.language.clone();
-        headers.insert("Host", request.domain.as_ref()?.parse().unwrap());
-        headers.insert("X-TC-Action", request.action.as_ref()?.parse().unwrap());
-        headers.insert("X-TC-Version", request.version.as_ref()?.parse().unwrap());
-        headers.insert("X-TC-Timestamp", timestamp.parse().unwrap());
-        headers.insert("X-TC-RequestClient", request_client.parse().unwrap());
-        headers.insert("X-TC-Language", language.parse().unwrap());
-        headers.insert(
-            "X-TC-Region",
-            self.client.region.to_string().parse().unwrap(),
-        );
-        if let Some(token) = self.client.credential.token() {
-            headers.insert("X-TC-Token", token.parse().unwrap());
-        }
-        headers.insert("X-TC-Region", {
-            let region = (*self.client.region).as_ref();
-            region.parse().unwrap()
-        });
-        headers.insert(
-            "Content-Type",
-            match *(request.method.as_ref()?) {
-                Method::GET => "application/x-www-form-urlencoded",
-                _ => "application/json",
-            }
-            .parse()
-            .unwrap(),
-        );
+    pub async fn send(self) -> Option<()> {
+        let req: reqwest::Request = self.request.into();
+        let client = self.client;
+        // TODO: Extract the response body and handle errors.
+        dbg!(&req);
+        client.execute(req).await.unwrap();
 
         Some(())
     }
@@ -130,18 +127,21 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::{BatchUpdateFirmwareRequest, ClientProfile, HTTProfile, Region};
 
-    #[test]
-    fn test() {
+    use super::Client;
+
+    #[tokio::test]
+    async fn test() {
         let client = Client::builder()
             .region(Region::APBeijing1)
+            .client_profile(ClientProfile::default())
+            .http_profile(HTTProfile::default())
             .build()
             .unwrap();
-        client
-            .iotcloud()
-            .batch_update_firmware()
-            .product_id("product_id")
-            .send();
+
+        let req = BatchUpdateFirmwareRequest::builder().set_product_id("product_id".to_string());
+
+        client.iotcloud().batch_update_firmware(req).send().await;
     }
 }
