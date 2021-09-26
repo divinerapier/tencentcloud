@@ -118,21 +118,26 @@ where
         let req: reqwest::Request = self.request.into();
         let client = self.client;
         // TODO: Extract the response body and handle errors.
-        dbg!(&req);
-        client.execute(req).await.unwrap();
-
+        // dbg!(&req);
+        let response = client.execute(req).await.unwrap();
+        println!("{:?}", response);
+        let body = response.text().await.unwrap();
+        println!("{:?}", body);
         Some(())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{BatchUpdateFirmwareRequest, ClientProfile, HTTProfile, Region};
+    use crate::{
+        BatchUpdateFirmwareRequest, ClientProfile, Credential, DescribeProductsRequest, HTTProfile,
+        Region,
+    };
 
     use super::Client;
 
     #[tokio::test]
-    async fn test() {
+    async fn test_batch_update_firmware() {
         let client = Client::builder()
             .region(Region::APBeijing1)
             .client_profile(ClientProfile::default())
@@ -143,5 +148,27 @@ mod test {
         let req = BatchUpdateFirmwareRequest::builder().set_product_id("product_id".to_string());
 
         client.iotcloud().batch_update_firmware(req).send().await;
+    }
+
+    #[tokio::test]
+    async fn test_describe_products() {
+        let client = Client::builder()
+            .region(Region::APBeijing)
+            .client_profile(ClientProfile::default())
+            .http_profile(HTTProfile::default())
+            .credential(
+                Credential::builder()
+                    .access_key(std::env!("ACCESS_KEY"))
+                    .secret_key(std::env!("SECRET_KEY"))
+                    .build(),
+            )
+            .build()
+            .unwrap();
+
+        let req = DescribeProductsRequest::builder()
+            .set_offset(Some(0))
+            .set_limit(Some(10));
+
+        client.iotcloud().describe_products(req).send().await;
     }
 }

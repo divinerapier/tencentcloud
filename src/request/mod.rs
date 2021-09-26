@@ -35,7 +35,7 @@ where
             rb.path
         );
 
-        dbg!(&rb);
+        // dbg!(&rb);
 
         let mut request = reqwest::Request::new(rb.method.clone(), u.parse().unwrap());
         if let Some(payload) = rb.payload.take() {

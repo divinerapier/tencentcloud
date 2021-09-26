@@ -24,6 +24,7 @@ pub enum Region {
     APNanjing2, // "ap-nanjing-2"
 
     // beijing
+    APBeijing,  // "ap-beijing"
     APBeijing1, // "ap-beijing-1"
     APBeijing2, // "ap-beijing-2"
     APBeijing3, // "ap-beijing-3"
@@ -60,6 +61,7 @@ impl Debug for Region {
             Self::APShanghai5 => write!(f, "ap-shanghai-5"),
             Self::APNanjing1 => write!(f, "ap-nanjing-1"),
             Self::APNanjing2 => write!(f, "ap-nanjing-2"),
+            Self::APBeijing => write!(f, "ap-beijing"),
             Self::APBeijing1 => write!(f, "ap-beijing-1"),
             Self::APBeijing2 => write!(f, "ap-beijing-2"),
             Self::APBeijing3 => write!(f, "ap-beijing-3"),
@@ -92,6 +94,7 @@ impl AsRef<str> for Region {
             Region::APShanghai5 => "ap-shanghai-5",
             Region::APNanjing1 => "ap-nanjing-1",
             Region::APNanjing2 => "ap-nanjing-2",
+            Region::APBeijing => "ap-beijing",
             Region::APBeijing1 => "ap-beijing-1",
             Region::APBeijing2 => "ap-beijing-2",
             Region::APBeijing3 => "ap-beijing-3",
@@ -126,6 +129,7 @@ impl FromStr for Region {
             "ap-shanghai-5" => Ok(Region::APShanghai5),
             "ap-nanjing-1" => Ok(Region::APNanjing1),
             "ap-nanjing-2" => Ok(Region::APNanjing2),
+            "ap-beijing" => Ok(Region::APBeijing),
             "ap-beijing-1" => Ok(Region::APBeijing1),
             "ap-beijing-2" => Ok(Region::APBeijing2),
             "ap-beijing-3" => Ok(Region::APBeijing3),

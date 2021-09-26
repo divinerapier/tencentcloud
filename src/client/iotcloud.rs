@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use crate::{
     request::{BatchUpdateFirmwareRequest, BatchUpdateFirmwareRequestBuilder},
-    RequestBuilder,
+    DescribeProductsRequest, DescribeProductsRequestBuilder,
 };
 
 use super::{Client, ServiceClient};
@@ -22,6 +20,13 @@ impl IOTClient {
         &self,
         req: BatchUpdateFirmwareRequestBuilder,
     ) -> ServiceClient<BatchUpdateFirmwareRequest> {
+        ServiceClient::new(self.client.clone(), req)
+    }
+
+    pub fn describe_products(
+        &self,
+        req: DescribeProductsRequestBuilder,
+    ) -> ServiceClient<DescribeProductsRequest> {
         ServiceClient::new(self.client.clone(), req)
     }
 }

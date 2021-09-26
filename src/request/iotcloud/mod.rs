@@ -164,6 +164,85 @@ impl Flat for BatchUpdateFirmwareRequest {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct DescribeProductsRequest {
+    pub offset: Option<u64>,
+    pub limit: Option<u64>,
+}
+
+impl DescribeProductsRequest {
+    pub fn builder() -> DescribeProductsRequestBuilder {
+        DescribeProductsRequestBuilder::default()
+    }
+}
+
+impl IntoRequest for DescribeProductsRequestBuilder {
+    type Request = DescribeProductsRequest;
+
+    fn into_request(self, config: Configuration) -> RequestBuilder<Self::Request> {
+        RequestBuilder {
+            credential: config.credential.into(),
+            profile: config.profile.into(),
+            region: config.region,
+            version: Some(API_VERSION.to_string()),
+            inner: self.req,
+            ..Default::default()
+        }
+    }
+}
+
+impl ServiceRequest for DescribeProductsRequest {
+    fn service(&self) -> &'static str {
+        "iotcloud"
+    }
+
+    fn action(&self) -> &'static str {
+        "DescribeProducts"
+    }
+}
+
+impl serde::Serialize for DescribeProductsRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("DescribeProductsRequest", 9)?;
+
+        if let Some(ref offset) = self.offset {
+            state.serialize_field("Offset", offset)?;
+        }
+        if let Some(ref limit) = self.limit {
+            state.serialize_field("Limit", limit)?;
+        }
+        state.end()
+    }
+}
+
+#[derive(Default)]
+pub struct DescribeProductsRequestBuilder {
+    req: DescribeProductsRequest,
+}
+
+impl DescribeProductsRequestBuilder {
+    pub fn set_offset(mut self, offset: Option<u64>) -> Self {
+        self.req.offset = offset;
+        self
+    }
+    pub fn set_limit(mut self, limit: Option<u64>) -> Self {
+        self.req.limit = limit;
+        self
+    }
+}
+
+impl Flat for DescribeProductsRequest {
+    fn flat(&self) -> HashMap<String, String> {
+        let mut hm = HashMap::new();
+        Self::insert(&mut hm, "Offset", &self.offset);
+        Self::insert(&mut hm, "Limit", &self.limit);
+        hm
+    }
+}
+
 #[cfg(test)]
 mod test {
     #[test]

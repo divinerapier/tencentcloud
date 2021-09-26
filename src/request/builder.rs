@@ -116,21 +116,21 @@ impl<T> RequestBuilder<T> {
         self
     }
 
-    fn flatten_request(mut self) -> Self
-    where
-        T: Into<HashMap<String, String>> + Clone,
-    {
-        // let inner = self.inner.take();
+    // fn flatten_request(mut self) -> Self
+    // where
+    //     T: Into<HashMap<String, String>> + Clone,
+    // {
+    //     // let inner = self.inner.take();
 
-        // if let Some(inner) = inner {
-        let inner = self.inner.clone();
-        let hm = inner.into();
-        for (k, v) in hm {
-            self.params.insert(k, v);
-        }
-        // }
-        self
-    }
+    //     // if let Some(inner) = inner {
+    //     let inner = self.inner.clone();
+    //     let hm = inner.into();
+    //     for (k, v) in hm {
+    //         self.params.insert(k, v);
+    //     }
+    //     // }
+    //     self
+    // }
 
     // fn ensure_scheme(mut self) -> Option<Self> {
     //     if self.scheme.is_some() {
@@ -193,10 +193,11 @@ impl<T> RequestBuilder<T> {
         }
         self.params.insert(
             "Timestamp".to_string(),
+            // "1632642247".to_string(),
             chrono::Local::now().timestamp().to_string(),
         );
         self.params
-            .insert("RequestClient".to_string(), "Rust".to_string());
+            .insert("RequestClient".to_string(), "SDK_GO_1.0.222".to_string());
         Some(self)
     }
 
@@ -289,19 +290,21 @@ impl<T> RequestBuilder<T> {
         if self.method == Method::POST {
             self.payload = Some(serde_json::to_string(&self.inner).unwrap());
         }
-        let mut hashed_request_payload = "".to_string();
-        if self.profile.as_ref()?.client.unsigned_payload {
-            hashed_request_payload = sha256hex("UNSIGNED-PAYLOAD");
+        //   = "".to_string();
+        let mut hashed_request_payload = if self.profile.as_ref()?.client.unsigned_payload {
             self.headers
                 .insert("X-TC-Content-SHA256", "UNSIGNED-PAYLOAD".parse().unwrap());
+            sha256hex("UNSIGNED-PAYLOAD")
         } else {
             let payload = if let Some(ref payload) = self.payload {
                 payload
             } else {
                 ""
             };
-            hashed_request_payload = sha256hex(payload);
-        }
+            // println!("payload: {}", payload);
+            sha256hex(payload)
+            // println!("hashed_request_payload: {}", hashed_request_payload);
+        };
         // let query_string = if let Some(ref query_string) = self.query_string {
         //     query_string
         // } else {
@@ -316,7 +319,7 @@ impl<T> RequestBuilder<T> {
             signed_headers,
             hashed_request_payload
         );
-
+        // println!("canonical_request: {}", canonical_request);
         let algorithm = SignMethod::Tc3HmacSha256;
         let request_timestamp = self.headers.get("X-TC-Timestamp").unwrap();
         let reqeust_timestamp =
@@ -329,6 +332,7 @@ impl<T> RequestBuilder<T> {
         };
         let credential_scope = format!("{}/{}/tc3_request", date, self.service.as_ref().unwrap());
         let hashed_canonical_request = sha256hex(&canonical_request);
+        // println!("hashed_canonical_request: {}", hashed_canonical_request);
         let string_2_sign = format!(
             "{}\n{}\n{}\n{}",
             algorithm.as_ref(),
@@ -336,13 +340,24 @@ impl<T> RequestBuilder<T> {
             credential_scope,
             hashed_canonical_request
         );
+        // println!("string_2_sign: {}", string_2_sign);
+        // println!("secret_date. date: {} {:?}", date, date.as_bytes());
+        let tc3_secret_key = || {
+            let mut tc3 = "TC3".as_bytes().to_vec();
+            tc3.extend_from_slice(self.credential.as_ref().unwrap().secret_key().as_bytes());
+            tc3
+        };
         let secret_date = hmacsha256(
             date.as_bytes(),
-            self.credential.as_ref().unwrap().secret_key().as_bytes(),
+            // self.credential.as_ref().unwrap().secret_key().as_bytes(),
+            &tc3_secret_key(),
         );
+        // println!("secret_service",);
         let secret_service = hmacsha256(self.service.as_ref().unwrap().as_bytes(), &secret_date);
+        // println!("secret_key");
         let secret_key = hmacsha256(b"tc3_request", &secret_service);
         let signature = hex::encode(&hmacsha256(string_2_sign.as_bytes(), &secret_key));
+        // println!("signature: {:?}", signature);
         let authorization = format!(
             "{} Credential={}/{}, SignedHeaders={}, Signature={}",
             algorithm.as_ref(),
@@ -393,6 +408,9 @@ pub fn hmacsha256(s: &[u8], key: &[u8]) -> Vec<u8> {
     let slice = code_bytes.as_slice();
     let mut result = Vec::new();
     result.extend(slice);
+    // println!("key: {:?}", key);
+    // println!("s: {:?}", s);
+    // println!("result: {:?}", result);
     result
 }
 
