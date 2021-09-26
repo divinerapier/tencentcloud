@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 
 use serde::ser::SerializeStruct;
@@ -30,6 +31,9 @@ pub struct BatchUpdateFirmwareRequest {
     // #[serde(rename = "TimeoutInterval")]
     pub timeout_interval: Option<u64>,
 }
+
+#[derive(Deserialize)]
+pub struct BatchUpdateFirmwareResponse {}
 
 impl serde::Serialize for BatchUpdateFirmwareRequest {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -169,6 +173,9 @@ pub struct DescribeProductsRequest {
     pub offset: Option<u64>,
     pub limit: Option<u64>,
 }
+
+#[derive(Deserialize)]
+pub struct DescribeProductsResponse {}
 
 impl DescribeProductsRequest {
     pub fn builder() -> DescribeProductsRequestBuilder {

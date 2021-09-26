@@ -114,7 +114,7 @@ impl<T> ServiceClient<T>
 where
     T: Flat + ServiceRequest + Flat + Debug + serde::Serialize,
 {
-    pub async fn send(self) -> Option<()> {
+    pub async fn send<R: serde::de::DeserializeOwned>(self) -> crate::Result<R> {
         let req: reqwest::Request = self.request.into();
         let client = self.client;
         // TODO: Extract the response body and handle errors.
@@ -123,15 +123,16 @@ where
         println!("{:?}", response);
         let body = response.text().await.unwrap();
         println!("{:?}", body);
-        Some(())
+        let r: R = serde_json::from_str(&body).unwrap();
+        Ok(r)
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::{
-        BatchUpdateFirmwareRequest, ClientProfile, Credential, DescribeProductsRequest, HTTProfile,
-        Region,
+        BatchUpdateFirmwareRequest, BatchUpdateFirmwareResponse, ClientProfile, Credential,
+        DescribeProductsRequest, DescribeProductsResponse, HTTProfile, Region,
     };
 
     use super::Client;
@@ -147,7 +148,12 @@ mod test {
 
         let req = BatchUpdateFirmwareRequest::builder().set_product_id("product_id".to_string());
 
-        client.iotcloud().batch_update_firmware(req).send().await;
+        let resp = client
+            .iotcloud()
+            .batch_update_firmware(req)
+            .send::<BatchUpdateFirmwareResponse>()
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -169,6 +175,11 @@ mod test {
             .set_offset(Some(0))
             .set_limit(Some(10));
 
-        client.iotcloud().describe_products(req).send().await;
+        client
+            .iotcloud()
+            .describe_products(req)
+            .send::<DescribeProductsResponse>()
+            .await
+            .unwrap();
     }
 }
