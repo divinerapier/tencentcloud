@@ -1,17 +1,12 @@
 use std::{
     collections::HashMap,
-    iter::FromIterator,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
 
-use crate::{
-    client::{Client, Configuration},
-    Credential, Flat, Language, Profile, Region, Scheme, SignMethod, ROOT_DOMAIN,
-};
+use crate::{Credential, Flat, Language, Profile, Region, Scheme, SignMethod, ROOT_DOMAIN};
 use reqwest::{header::HeaderMap, Method};
-use sha2::Digest;
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 
 use super::ServiceRequest;
 
@@ -286,12 +281,10 @@ impl<T> RequestBuilder<T> {
             self.headers.get("Host").unwrap().to_str().unwrap()
         );
         let signed_headers = "content-type;host";
-        // let mut request_payload = "".to_string();
         if self.method == Method::POST {
             self.payload = Some(serde_json::to_string(&self.inner).unwrap());
         }
-        //   = "".to_string();
-        let mut hashed_request_payload = if self.profile.as_ref()?.client.unsigned_payload {
+        let hashed_request_payload = if self.profile.as_ref()?.client.unsigned_payload {
             self.headers
                 .insert("X-TC-Content-SHA256", "UNSIGNED-PAYLOAD".parse().unwrap());
             sha256hex("UNSIGNED-PAYLOAD")
@@ -408,9 +401,6 @@ pub fn hmacsha256(s: &[u8], key: &[u8]) -> Vec<u8> {
     let slice = code_bytes.as_slice();
     let mut result = Vec::new();
     result.extend(slice);
-    // println!("key: {:?}", key);
-    // println!("s: {:?}", s);
-    // println!("result: {:?}", result);
     result
 }
 

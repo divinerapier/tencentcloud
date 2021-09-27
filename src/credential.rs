@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 // FIXME: only support the Credential
 
 #[derive(Default, Debug)]

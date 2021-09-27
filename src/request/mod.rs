@@ -1,12 +1,9 @@
 use std::{
-    borrow::Cow,
     collections::HashMap,
-    convert::TryFrom,
     fmt::{Debug, Display},
-    sync::Arc,
 };
 
-use crate::{client::Configuration, credential::Credential, profile::Profile, region::Region};
+use crate::client::Configuration;
 
 pub use builder::RequestBuilder;
 pub use iotcloud::*;

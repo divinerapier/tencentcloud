@@ -3,10 +3,7 @@ use std::collections::HashMap;
 
 use serde::ser::SerializeStruct;
 
-use crate::{
-    client::{Configuration, ServiceClient},
-    Flat, IntoRequest,
-};
+use crate::{client::Configuration, Flat, IntoRequest};
 
 use super::{RequestBuilder, ServiceRequest, API_VERSION};
 
@@ -174,8 +171,76 @@ pub struct DescribeProductsRequest {
     pub limit: Option<u64>,
 }
 
-#[derive(Deserialize)]
-pub struct DescribeProductsResponse {}
+#[derive(Deserialize, Debug)]
+pub struct DescribeProductsResponse {
+    #[serde(rename = "RequestId")]
+    pub request_id: String,
+    #[serde(rename = "TotalCount")]
+    pub total_count: usize,
+    #[serde(rename = "Products")]
+    pub products: Vec<Product>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Product {
+    #[serde(rename = "ProductId")]
+    pub product_id: String,
+    #[serde(rename = "ProductName")]
+    pub product_name: String,
+    #[serde(rename = "ProductMetadata")]
+    pub product_metadata: ProductMetadata,
+    #[serde(rename = "ProductProperties")]
+    pub product_properties: ProductProperties,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ProductMetadata {
+    #[serde(rename = "CreationDate")]
+    pub creation_date: i64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ProductProperties {
+    // "ProductDescription": "avp泊车项目-生产环境使用",
+    #[serde(rename = "ProductDescription")]
+    pub product_description: String,
+    // "EncryptionType": "2",
+    #[serde(rename = "EncryptionType")]
+    pub encryption_type: String,
+    // "Region": "",
+    #[serde(rename = "Region")]
+    pub region: String,
+    // "ProductType": 0,
+    #[serde(rename = "ProductType")]
+    pub product_type: i32,
+    // "Format": "custom",
+    #[serde(rename = "Format")]
+    pub format: String,
+    // "Platform": "DEFAULT",
+    #[serde(rename = "Platform")]
+    pub platform: String,
+    // "Appeui": "",
+    #[serde(rename = "Appeui")]
+    pub appeui: String,
+    // "ModelId": "-1",
+    #[serde(rename = "ModelId")]
+    pub model_id: String,
+    // "ModelName": "",
+    #[serde(rename = "ModelName")]
+    pub model_name: String,
+    // "ProductKey": "",
+    #[serde(rename = "ProductKey")]
+    pub product_key: String,
+    // "RegisterType": 0,
+    #[serde(rename = "RegisterType")]
+    pub register_type: i32,
+    // "ProductSecret": "",
+    #[serde(rename = "ProductSecret")]
+    pub product_secret: String,
+    // "RegisterLimit": 0
+    #[serde(rename = "RegisterLimit")]
+    pub register_limit: i32,
+}
 
 impl DescribeProductsRequest {
     pub fn builder() -> DescribeProductsRequestBuilder {

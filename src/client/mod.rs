@@ -1,21 +1,10 @@
-use core::panic;
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-    sync::Arc,
-    time::Duration,
-};
-
-use reqwest::{
-    header::{HeaderMap, HeaderValue},
-    Method,
-};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use crate::{
     credential::Credential,
     profile::{ClientProfile, HTTProfile, Profile},
     region::Region,
-    request::{BatchUpdateFirmwareRequest, RequestBuilder, ServiceRequest},
+    request::{RequestBuilder, ServiceRequest},
     Flat, IntoRequest, ROOT_DOMAIN,
 };
 
@@ -69,7 +58,7 @@ impl ClientBuilder {
         self
     }
 
-    pub fn build(mut self) -> Option<Client> {
+    pub fn build(mut self) -> crate::Result<Client> {
         if self.http_profile.root_domain.is_empty() {
             self.http_profile.root_domain = ROOT_DOMAIN.to_string();
         }
@@ -78,8 +67,7 @@ impl ClientBuilder {
             .connect_timeout(Duration::from_secs(self.http_profile.timeout))
             .pool_idle_timeout(Duration::from_secs(3600))
             .pool_max_idle_per_host(100)
-            .build()
-            .unwrap();
+            .build()?;
 
         let config = Configuration {
             region: self.region,
@@ -87,7 +75,7 @@ impl ClientBuilder {
             credential: Arc::new(self.credential),
         };
 
-        Some(Client { client, config })
+        Ok(Client { client, config })
     }
 }
 
@@ -114,17 +102,16 @@ impl<T> ServiceClient<T>
 where
     T: Flat + ServiceRequest + Flat + Debug + serde::Serialize,
 {
-    pub async fn send<R: serde::de::DeserializeOwned>(self) -> crate::Result<R> {
+    pub async fn send<R: serde::de::DeserializeOwned>(
+        self,
+    ) -> crate::ResponseResult<crate::response::Response<R>> {
         let req: reqwest::Request = self.request.into();
         let client = self.client;
-        // TODO: Extract the response body and handle errors.
-        // dbg!(&req);
-        let response = client.execute(req).await.unwrap();
-        println!("{:?}", response);
-        let body = response.text().await.unwrap();
-        println!("{:?}", body);
-        let r: R = serde_json::from_str(&body).unwrap();
-        Ok(r)
+        let response = client.execute(req).await?;
+        match response.json().await {
+            Ok(r) => Ok(Ok(r)),
+            Err(e) => Ok(Err(e.into())),
+        }
     }
 }
 
@@ -148,16 +135,17 @@ mod test {
 
         let req = BatchUpdateFirmwareRequest::builder().set_product_id("product_id".to_string());
 
-        let resp = client
+        client
             .iotcloud()
             .batch_update_firmware(req)
             .send::<BatchUpdateFirmwareResponse>()
             .await
+            .unwrap()
             .unwrap();
     }
 
     #[tokio::test]
-    async fn test_describe_products() {
+    async fn test_describe_products() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let client = Client::builder()
             .region(Region::APBeijing)
             .client_profile(ClientProfile::default())
@@ -168,18 +156,18 @@ mod test {
                     .secret_key(std::env!("SECRET_KEY"))
                     .build(),
             )
-            .build()
-            .unwrap();
+            .build()?;
 
         let req = DescribeProductsRequest::builder()
             .set_offset(Some(0))
             .set_limit(Some(10));
 
-        client
+        let resp = client
             .iotcloud()
             .describe_products(req)
             .send::<DescribeProductsResponse>()
-            .await
-            .unwrap();
+            .await??;
+        dbg!(resp);
+        Ok(())
     }
 }
