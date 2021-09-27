@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::Debug,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
@@ -419,6 +420,30 @@ where
         let service = self.inner.service().to_string();
         self.service = Some(service);
         Some(self)
+    }
+}
+
+impl<T> From<RequestBuilder<T>> for reqwest::Request
+where
+    T: Flat + Debug + ServiceRequest + serde::Serialize,
+{
+    fn from(rb: RequestBuilder<T>) -> Self {
+        let mut rb = rb.ensure().unwrap();
+        let u = format!(
+            "{}://{}{}",
+            rb.scheme.as_ref(),
+            rb.domain.as_ref().unwrap(),
+            rb.path
+        );
+
+        // dbg!(&rb);
+
+        let mut request = reqwest::Request::new(rb.method.clone(), u.parse().unwrap());
+        if let Some(payload) = rb.payload.take() {
+            *request.body_mut() = Some(payload.into());
+        }
+        *request.headers_mut() = rb.headers;
+        request
     }
 }
 

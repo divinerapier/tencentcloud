@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-};
+use std::{collections::HashMap, fmt::Display};
 
 use crate::client::Configuration;
 
@@ -17,30 +14,6 @@ pub const API_VERSION: &str = "2018-06-14";
 pub trait ServiceRequest {
     fn service(&self) -> &'static str;
     fn action(&self) -> &'static str;
-}
-
-impl<T> From<RequestBuilder<T>> for reqwest::Request
-where
-    T: Flat + Debug + ServiceRequest + serde::Serialize,
-{
-    fn from(rb: RequestBuilder<T>) -> Self {
-        let mut rb = rb.ensure().unwrap();
-        let u = format!(
-            "{}://{}{}",
-            rb.scheme.as_ref(),
-            rb.domain.as_ref().unwrap(),
-            rb.path
-        );
-
-        // dbg!(&rb);
-
-        let mut request = reqwest::Request::new(rb.method.clone(), u.parse().unwrap());
-        if let Some(payload) = rb.payload.take() {
-            *request.body_mut() = Some(payload.into());
-        }
-        *request.headers_mut() = rb.headers;
-        request
-    }
 }
 
 pub trait IntoRequest {
